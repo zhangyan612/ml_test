@@ -48,6 +48,7 @@ def max_Q(s):
         if val is None or (q > val):
             val = q
             act = a
+    print(Q)
     return act, val
 
 
@@ -67,7 +68,7 @@ def run():
         s = World.player
         max_act, max_val = max_Q(s)
         (s, a, r, s2) = do_action(max_act)
-
+        # print(s2)
         # Update Q
         max_act, max_val = max_Q(s2)
         inc_Q(s, a, alpha, r + discount * max_val)
