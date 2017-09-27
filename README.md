@@ -1,2 +1,2 @@
-# ml_test
+# Machine Learning playground
 a test project for all machine learning topics
