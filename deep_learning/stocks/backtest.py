@@ -1,15 +1,3 @@
-# -------------------------------------------------------------------------------
-# Name:        backtest
-# Purpose:     perform routine backtesting  tasks.
-#              This module should be useable as a stand-alone library outide of the TWP package.
-#
-# Author:      Jev Kuznetsov
-#
-# Created:     03/07/2014
-# Copyright:   (c) Jev Kuznetsov 2013
-# Licence:     BSD
-# -------------------------------------------------------------------------------
-
 import pandas as pd
 import matplotlib.pyplot as plt
 import sys
@@ -76,8 +64,6 @@ class Backtest(object):
 
         """
 
-
-
         # check for correct input
         assert signalType in ['capital', 'shares'], "Wrong signal type provided, must be 'capital' or 'shares'"
 
@@ -133,27 +119,32 @@ class Backtest(object):
 
         # ---plot markers
         # this works, but I rather prefer colored markers for each day of position rather than entry-exit signals
-        #         indices = {'g^': self.trades[self.trades > 0].index ,
-        #                    'ko':self.trades[self.trades == 0].index,
-        #                    'rv':self.trades[self.trades < 0].index}
-        #
-        #
-        #         for style, idx in indices.iteritems():
-        #             if len(idx) > 0:
-        #                 p[idx].plot(style=style)
+        indices = {'go': self.trades[self.trades > 0].index,
+                   'ko': self.trades[self.trades == 0].index,
+                   'rv': self.trades[self.trades < 0].index}
+
+        for style, idx in indices.items():
+            if len(idx) > 0:
+                p[idx].plot(style=style)
+                if style == 'go':
+                    l.append('Buy')
+                elif style == 'ko':
+                    l.append('Clear Position')
+                elif style == 'rv':
+                    l.append('Short')
 
         # --- plot trades
         # colored line for long positions
-        idx = (self.data['shares'] > 0) | (self.data['shares'] > 0).shift(1)
-        if idx.any():
-            p[idx].plot(style='go')
-            l.append('long')
-
-        # colored line for short positions
-        idx = (self.data['shares'] < 0) | (self.data['shares'] < 0).shift(1)
-        if idx.any():
-            p[idx].plot(style='ro')
-            l.append('short')
+        # idx = (self.data['shares'] > 0) | (self.data['shares'] > 0).shift(1)
+        # if idx.any():
+        #     p[idx].plot(style='go')
+        #     l.append('long')
+        #
+        # #colored line for short positions
+        # idx = (self.data['shares'] < 0) | (self.data['shares'] < 0).shift(1)
+        # if idx.any():
+        #     p[idx].plot(style='ro')
+        #     l.append('short')
 
         plt.xlim([p.index[0], p.index[-1]])  # show full axis
 
