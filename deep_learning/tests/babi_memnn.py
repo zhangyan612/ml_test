@@ -92,6 +92,9 @@ def vectorize_stories(data, word_idx, story_maxlen, query_maxlen):
     return (pad_sequences(X, maxlen=story_maxlen),
             pad_sequences(Xq, maxlen=query_maxlen), np.array(Y))
 
+
+
+
 try:
     path = get_file('babi-tasks-v1-2.tar.gz', origin='https://s3.amazonaws.com/text-datasets/babi_tasks_1-20_v1-2.tar.gz')
 except:
@@ -113,6 +116,15 @@ challenge = challenges[challenge_type]
 print('Extracting stories for the challenge:', challenge_type)
 train_stories = get_stories(tar.extractfile(challenge.format('train')))
 test_stories = get_stories(tar.extractfile(challenge.format('test')))
+
+print(train_stories[0])
+
+print(test_stories[0])
+print(test_stories[1])
+
+
+
+# transformation
 
 vocab = set()
 for story, q, answer in train_stories + test_stories:
@@ -160,6 +172,7 @@ print('answers_train shape:', answers_train.shape)
 print('answers_test shape:', answers_test.shape)
 print('-')
 print('Compiling...')
+
 
 # placeholders
 input_sequence = Input((story_maxlen,))
@@ -218,14 +231,22 @@ answer = Dense(vocab_size)(answer)  # (samples, vocab_size)
 answer = Activation('softmax')(answer)
 
 # build the final model
-model = Model([input_sequence, question], answer)
-model.compile(optimizer='rmsprop', loss='categorical_crossentropy',
-              metrics=['accuracy'])
-
-# train
-model.fit([inputs_train, queries_train], answers_train,
-          batch_size=32,
-          epochs=120,
-          validation_data=([inputs_test, queries_test], answers_test))
-
+# model = Model([input_sequence, question], answer)
+# model.compile(optimizer='rmsprop', loss='categorical_crossentropy',
+#               metrics=['accuracy'])
+#
+# # train
+# model.fit([inputs_train, queries_train], answers_train,
+#           batch_size=32,
+#           epochs=120,
+#           validation_data=([inputs_test, queries_test], answers_test))
+#
 # model.save('my_model.h5')
+
+from keras.models import load_model
+
+# load model and see result
+model = load_model('my_model.h5')
+yFit = model.predict([inputs_train, queries_train], batch_size=32, verbose=0)
+print(yFit)
+
