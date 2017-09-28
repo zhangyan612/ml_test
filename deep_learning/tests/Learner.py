@@ -48,7 +48,7 @@ def max_Q(s):
         if val is None or (q > val):
             val = q
             act = a
-    print(Q)
+    print(act, val)
     return act, val
 
 
