@@ -1,10 +1,11 @@
 from __future__ import print_function
 import numpy as np
 import pandas as pd
-import backtest as twp
+from deep_learning.stocks import backtest as twp
 import random, timeit
 from matplotlib import pyplot as plt
 from sklearn import metrics, preprocessing
+from sklearn.externals import joblib
 from keras.models import Sequential
 from keras.models import load_model
 from keras.layers.core import Dense, Dropout, Activation
@@ -26,23 +27,46 @@ def load_data():
     price = np.sin(np.arange(300) / 30.0)  # sine prices
     return price
 
+def load_stock_data():
+    prices = pd.read_pickle('data/EURUSD_1day.pkl')
+    print('total data set: %s' % len(prices.index))
+    x_train = prices.iloc[-650:-200, ]
+    print('training data set: %s' % len(x_train.index))
+    print('start with %s' % x_train.index[0])
+    return x_train
+
 
 # Initialize first state, all items are placed deterministically
 # state is current bar position of xdata, xdata is the collection of state: [current_price, gain/loss], which is the price history
-def init_state(data):
-    close = data
-    diff = np.diff(data)
+# def init_state(data):
+#     close = data
+#     diff = np.diff(data)
+#     diff = np.insert(diff, 0, 0)
+#
+#     # --- Preprocess data
+#     xdata = np.column_stack((close, diff))
+#     xdata = np.nan_to_num(xdata)
+#     scaler = preprocessing.StandardScaler()
+#     xdata = scaler.fit_transform(xdata)
+#
+#     state = xdata[0:1, :]
+#     return state, xdata
+
+def init_state(indata):
+    close = indata['Value'].values
+    diff = np.diff(close)
     diff = np.insert(diff, 0, 0)
 
     # --- Preprocess data
     xdata = np.column_stack((close, diff))
     xdata = np.nan_to_num(xdata)
     scaler = preprocessing.StandardScaler()
+    # xdata = np.expand_dims(scaler.fit_transform(xdata), axis=1)
+    # joblib.dump(scaler, 'data/scaler.pkl')
+    # state = xdata[0:1, 0:1, :]
     xdata = scaler.fit_transform(xdata)
-
     state = xdata[0:1, :]
     return state, xdata
-
 
 # Take Action
 def take_action(state, xdata, action, signal, time_step):
@@ -160,9 +184,9 @@ def run():
     model = init_model()
 
     start_time = timeit.default_timer() #timer
-    indata = load_data()
+    indata = load_stock_data()
     epochs = 100
-    gamma = 0.5  # a high gamma makes a long term reward more valuable
+    gamma = 0.95  # a high gamma makes a long term reward more valuable
     epsilon = 1
     learning_progress = [] # stores tuples of (S, A, R, S')
     h = 0
@@ -205,6 +229,7 @@ def run():
             maxQ = np.max(newQ)
             y = np.zeros((1, 4))
             y[:] = qval[:]
+
             if terminal_state == 0:  # non-terminal state
                 update = (reward + (gamma * maxQ))
             else:  # terminal state (means that it is the last state)
@@ -228,7 +253,7 @@ def run():
     elapsed = np.round(timeit.default_timer() - start_time, decimals=2)
     print("Completed in %f" % (elapsed,))
     # save the model
-    model.save('ex2_balance.h5')
+    # model.save('ex2_balance.h5')
 
     # plot results
     bt = twp.Backtest(pd.Series(data=[x[0] for x in xdata]), signal, signalType='shares')
@@ -249,83 +274,6 @@ def run():
     plt.show()
 
 
-def run_with_model():
-    model = load_model('ex2.h5')
-
-    start_time = timeit.default_timer()  # timer
-    indata = load_data()
-    epochs = 37
-    gamma = 0.9  # a high gamma makes a long term reward more valuable
-    epsilon = 1
-    learning_progress = []  # stores tuples of (S, A, R, S')
-    h = 0
-    signal = pd.Series(index=np.arange(len(indata)))
-
-    for i in range(epochs):
-
-        state, xdata = init_state(indata)
-        status = 1
-        terminal_state = 0
-        time_step = 1
-        # while learning is still in progress
-        while (status == 1):
-            # We start in state S
-            # Run the Q function on S to get predicted reward values on all the possible actions
-            qval = model.predict(state.reshape(1, 2), batch_size=1)
-            if (random.random() < epsilon) and i != epochs - 1:  # maybe choose random action if not the last epoch
-                action = np.random.randint(0, 4)  # assumes 4 different actions
-            else:  # choose best action from Q(s,a) values
-                action = (np.argmax(qval))
-            # Take action, observe new state S'
-            new_state, time_step, signal, terminal_state = take_action(state, xdata, action, signal, time_step)
-            print(signal)
-            # print(new_state, time_step, signal, terminal_state)
-            # Observe reward
-            reward = get_reward(new_state, time_step, action, xdata, signal, terminal_state, i)
-            # print('reward:%s' % reward)
-            # Get max_Q(S',a)
-            newQ = model.predict(new_state.reshape(1, 2), batch_size=1)
-            maxQ = np.max(newQ)
-            y = np.zeros((1, 4))
-            y[:] = qval[:]
-            if terminal_state == 0:  # non-terminal state
-                update = (reward + (gamma * maxQ))
-            else:  # terminal state (means that it is the last state)
-                update = reward
-            y[0][action] = update  # target output
-            model.fit(state.reshape(1, 2), y, batch_size=1, nb_epoch=1, verbose=0)
-            state = new_state
-            if terminal_state == 1:  # terminal state
-                status = 0
-        eval_reward = evaluate_Q(indata, model, i)
-        print("Epoch #: %s Reward: %f Epsilon: %f" % (i, eval_reward, epsilon))
-        learning_progress.append((eval_reward))
-        # print(learning_progress)
-        if epsilon > 0.1:
-            epsilon -= (1.0 / epochs)
-
-    elapsed = np.round(timeit.default_timer() - start_time, decimals=2)
-    print("Completed in %f" % (elapsed,))
-    # save the model
-    # model.save('ex2.h5')
-
-    # plot results
-    bt = twp.Backtest(pd.Series(data=[x[0] for x in xdata]), signal, signalType='shares')
-    bt.data['delta'] = bt.data['shares'].diff().fillna(0)
-    print(bt.data)
-    plt.figure()
-    bt.plotTrades()
-    plt.suptitle('total epochs:' + str(epochs))
-    plt.savefig('plt/final_trades' + '.png', bbox_inches='tight', pad_inches=1, dpi=72)  # assumes there is a ./plt dir
-    plt.close('all')
-    plt.figure()
-    plt.subplot(3, 1, 1)
-    bt.plotTrades()
-    plt.subplot(3, 1, 2)
-    bt.pnl.plot(style='x-')
-    plt.subplot(3, 1, 3)
-    plt.plot(learning_progress)
-    plt.show()
 
 if __name__ == "__main__":
     run()
