@@ -79,11 +79,13 @@ if __name__ == "__main__":
     # state, xdata = init_state(random_data)
     # print(state, xdata)
 
-    test_data = load_stock_data()
-    state, xdata = init_state_stock(test_data)
-    print(state, xdata)
+    # test_data = load_stock_data()
+    # state, xdata = init_state_stock(test_data)
+    # print(state, xdata)
     # state, xdata = init_state(test_data)
+    import random
 
+    print(random.random())
     # print(state, xdata)
     # read_convert_data()
     # draw_data_graph()

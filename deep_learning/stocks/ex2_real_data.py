@@ -38,35 +38,35 @@ def load_stock_data():
 
 # Initialize first state, all items are placed deterministically
 # state is current bar position of xdata, xdata is the collection of state: [current_price, gain/loss], which is the price history
-# def init_state(data):
-#     close = data
-#     diff = np.diff(data)
-#     diff = np.insert(diff, 0, 0)
-#
-#     # --- Preprocess data
-#     xdata = np.column_stack((close, diff))
-#     xdata = np.nan_to_num(xdata)
-#     scaler = preprocessing.StandardScaler()
-#     xdata = scaler.fit_transform(xdata)
-#
-#     state = xdata[0:1, :]
-#     return state, xdata
-
-def init_state(indata):
-    close = indata['Value'].values
-    diff = np.diff(close)
+def init_state(data):
+    close = data
+    diff = np.diff(data)
     diff = np.insert(diff, 0, 0)
 
     # --- Preprocess data
     xdata = np.column_stack((close, diff))
     xdata = np.nan_to_num(xdata)
     scaler = preprocessing.StandardScaler()
-    # xdata = np.expand_dims(scaler.fit_transform(xdata), axis=1)
-    # joblib.dump(scaler, 'data/scaler.pkl')
-    # state = xdata[0:1, 0:1, :]
     xdata = scaler.fit_transform(xdata)
+
     state = xdata[0:1, :]
     return state, xdata
+
+# def init_state(indata):
+#     close = indata['Value'].values
+#     diff = np.diff(close)
+#     diff = np.insert(diff, 0, 0)
+#
+#     # --- Preprocess data
+#     xdata = np.column_stack((close, diff))
+#     xdata = np.nan_to_num(xdata)
+#     scaler = preprocessing.StandardScaler()
+#     # xdata = np.expand_dims(scaler.fit_transform(xdata), axis=1)
+#     # joblib.dump(scaler, 'data/scaler.pkl')
+#     # state = xdata[0:1, 0:1, :]
+#     xdata = scaler.fit_transform(xdata)
+#     state = xdata[0:1, :]
+#     return state, xdata
 
 # Take Action
 def take_action(state, xdata, action, signal, time_step):
@@ -159,8 +159,8 @@ def evaluate_Q(eval_data, eval_model, epoch_num):
 
 def get_random_action():
     # how many actions -- buy hold sell
-    #return np.random.randint(0, 4)
-    return random.choice([1,3])
+    return np.random.randint(0, 4)
+    # return random.choice([1,3])
 
 # This neural network is the the Q-function, run it like this:
 # model.predict(state.reshape(1,64), batch_size=1)
@@ -184,9 +184,9 @@ def run():
     model = init_model()
 
     start_time = timeit.default_timer() #timer
-    indata = load_stock_data()
+    indata = load_data() #load_stock_data()
     epochs = 100
-    gamma = 0.95  # a high gamma makes a long term reward more valuable
+    gamma = 0.9  # a high gamma makes a long term reward more valuable
     epsilon = 1
     learning_progress = [] # stores tuples of (S, A, R, S')
     h = 0
